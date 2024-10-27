@@ -27,7 +27,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: rust_stats_tool_binary
-        path: target/release/yijia_ids706_mini_proj7  
+        path: target/release/yijia_ids706_individual2
 
     - name: Check formatting
       run: make format

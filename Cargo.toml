@@ -1,6 +1,9 @@
 [package]
-name = "yijia_ids706_mini_proj7" 
+name = "yijia_ids706_individual2" 
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+reqwest = { version = "0.11", features = ["blocking"] }
+csv = "1.1"                # For CSV reading
+rusqlite = "0.26"          # For SQLite database handling
