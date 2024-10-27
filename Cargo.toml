@@ -1,0 +1,6 @@
+[package]
+name = "yijia_ids706_mini_proj7" 
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
