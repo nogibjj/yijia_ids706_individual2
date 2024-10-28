@@ -1,6 +1,6 @@
 # yijia_ids706_individual2
 
-# Rust Template
+## Rust Template
 This Rust project demonstrates Extract, Transform, Load (ETL) operations, connects to a SQLite database, and performs CRUD operations on weather data for the Durham region.
 
 ## CI/CD Badge
@@ -43,7 +43,7 @@ chmod +x yijia_ids706_individual2  # Make the binary executable
 ```
 
 ### 3. Running Locally with Rust Installed
-### Steps
+#### Steps
 1. Clone the repository:
 
 ```sh
