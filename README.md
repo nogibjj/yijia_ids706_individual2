@@ -1,20 +1,22 @@
-# yijia_ids706_miniProj7
+# yijia_ids706_individual2
 
 # Rust Template
-
-This project is a simple statistical tool built with Rust that calculates the mean and median of a list of numbers. The tool is packaged with a Makefile for easier management of tasks, including building, testing, linting, and formatting. CI/CD is implemented via GitHub Actions.
+This Rust project demonstrates Extract, Transform, Load (ETL) operations, connects to a SQLite database, and performs CRUD operations on weather data for the Durham region.
 
 ## CI/CD Badge
-[![Rust CI](https://github.com/nogibjj/yijia_ids706_miniProj7/actions/workflows/ci.yml/badge.svg)](https://github.com/nogibjj/yijia_ids706_miniProj7/actions/workflows/ci.yml)
+[![Rust CI](https://github.com/nogibjj/yijia_ids706_individual2/actions/workflows/ci.yml/badge.svg)](https://github.com/nogibjj/yijia_ids706_individual2/actions/workflows/ci.yml)
+
+##  Using LLM 
+This project was adapted from a previous Python project (Mini Project 5). I used GitHub Copilot to assist in converting the codebase from Python to Rust. While some fix and some adaptations were necessary due to language differences, like switching from passing a database path to using direct database connections to handle concurrency. ChatGPT was also used to troubleshoot bugs and optimize commands.
 
 ## File Structure
 
 - **`.devcontainer/`**: Contains the development container configuration (`devcontainer.json` and a Dockerfile) to ensure a consistent development environment. From (https://github.com/johncoogan53/Rust-Template/blob/main/.devcontainer/Dockerfile)
-- **`Makefile`**: Provides commands for building, formatting, linting and testing the project.
-- **`.github/workflows/`**: Contains the CI/CD pipeline configuration (ci.yml) that triggers on pushes and pull requests, ensuring continuous testing and validation.
-- **`src/`**: Contains the source code for the Rust tool, including the main.rs and lib.rs files.
-- **`tests/`**: Contains the test cases for the statistical functions, ensuring that the tool works correctly.
-
+- **`Makefile`**: Commands for building, formatting, linting, and testing the project.
+- **`.github/workflows/`**: Contains CI/CD configurations for formating, linting, building, testing, and deploying the Rust binary.
+- **`src/`**: Contains the main program files, including main.rs and lib.rs with core logic.
+- **`tests/`**: Contains test_main.rs, testing CRUD operations and ETL functions.
+- **`Cargo.toml`** Specifies project dependencies and configuration.
 
 ## Installation
 
@@ -27,26 +29,25 @@ This project is a simple statistical tool built with Rust that calculates the me
     - No need to install Rust on your local machine.
       
 ### 2. Download Prebuilt Binary (No Rust Required)
-Download the prebuilt binary artifact and ensure using a Linux environment (e.g., GitHub Codespaces, a Linux VM, or a Linux machine) 
-
+Download the prebuilt binary artifact and ensure using a Linux environment.
 Here’s how to get the binary:
 1. Go to the Actions tab in the repository.
 2. Select the latest workflow run.
-3. Scroll down to Artifacts and download the yijia_ids706_mini_proj7.
-4. Move the binary to a Linux environment where you want to run the tool (e.g., GitHub Codespaces or a Linux machine).
+3. Scroll down to Artifacts and download the yijia_ids706_individual2.
+4. Move the binary to a Linux environment, like GitHub Codespaces or a Linux VM, to run the tool."
 
 **Usage of Binary:** 
 ```sh
-./yijia_ids706_mini_proj7
+chmod +x yijia_ids706_individual2  # Make the binary executable
+./yijia_ids706_individual2  # Runs ETL and CRUD operations as defined in main.rs
 ```
-It will prompt you to enter a list of numbers (separated by spaces) and will return the mean and median.
 
 ### 3. Running Locally with Rust Installed
 ### Steps
 1. Clone the repository:
 
 ```sh
-git clone git@github.com:nogibjj/yijia_ids706_miniProj7.git
+git clone git@github.com:nogibjj/yijia_ids706_individual2.git
 ```
 
 2. (Optional): Open the repository in Visual Studio Code and reopen it in a container using the .devcontainer configuration to ensure a consistent development environment.
@@ -56,11 +57,35 @@ git clone git@github.com:nogibjj/yijia_ids706_miniProj7.git
 make build 
 ```
 
-4. Run the tool:
+4. Run the project:
 ```sh
 make run 
 ```
-The tool will prompt you to enter a list of numbers (separated by spaces) and will return the mean and median of those numbers.
+This command performs the following steps:
+1. Sets up file paths.
+2. Ensures the data directory exists.
+3. Downloads the weather dataset.
+4. Connects to the SQLite database.
+5. Demonstrates CRUD operations on the dataset.
+
+## Optimized Rust Binary Generation
+This project includes a GitHub Actions pipeline that generates an optimized Rust binary. The following section explains how this binary is generated and how to access it.
+
+### GitHub Actions Pipeline: Binary Generation
+The ci.yml workflow file performs the following steps:
+
+1. **Build:** Executes cargo build --release to generate an optimized binary.
+2. **Upload Binary as an Artifact:** Uploads the optimized binary to GitHub Actions for easy access.
+```sh
+    - name: Build
+      run: make build 
+      
+    - name: Upload binary as an artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: rust_stats_tool_binary
+        path: target/release/yijia_ids706_individual2
+```
 
 ## Available Commands
 Here is a list of available commands using the Makefile:
