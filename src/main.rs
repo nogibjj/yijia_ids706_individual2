@@ -1,11 +1,9 @@
-mod extract;
-mod query;
-mod transform_load;
-
 use std::fs;
 use std::path::Path;
+use rusqlite::Connection;
+use yijia_ids706_individual2::{extract, transform_load, create_entry, read_entry, update_entry, delete_entry};
 
-fn main() {
+fn main() -> rusqlite::Result<()> {
     // Step 1: Set up paths
     let dataset_url = "https://raw.githubusercontent.com/nogibjj/yijia_ids706_miniProj3/refs/heads/main/rdu-weather-history.csv";
     let dataset_path = "data/rdu-weather-history.csv";
@@ -21,44 +19,46 @@ fn main() {
     }
 
     // Step 3: Download the dataset
-    match extract::extract(dataset_url, dataset_path) {
+    match extract(dataset_url, dataset_path) {
         Ok(_) => println!("Dataset downloaded successfully."),
         Err(e) => eprintln!("Error downloading dataset: {}", e),
     }
 
-    // Step 4: Load data into the SQLite database
-    match transform_load::transform_load(dataset_path) {
+    // Step 4: Connect to the SQLite database
+    let conn = Connection::open(db_path)?;
+    match transform_load(&conn, dataset_path) {
         Ok(_) => println!("Data loaded into SQLite database."),
         Err(e) => eprintln!("Error loading data into SQLite database: {}", e),
     }
 
     // Step 5: Perform CRUD operations
-    // Create an entry
     let new_data = ["2023-01-01", "1.0", "5.0", "0.0", "0.0", "0.0", "3.0"];
-    if let Err(e) = query::create_entry(db_path, &new_data) {
+    if let Err(e) = create_entry(&conn, &new_data) {
         eprintln!("Error creating entry: {}", e);
     } else {
         println!("Entry created successfully.");
     }
 
     // Read the entry
-    match query::read_entry(db_path, "2023-01-01") {
+    match read_entry(&conn, "2023-01-01") {
         Ok(entries) => println!("Read entries: {:?}", entries),
         Err(e) => eprintln!("Error reading entries: {}", e),
     }
 
     // Update the entry
     let updated_data = ["2.0", "6.0", "0.1", "0.0", "0.1", "4.0"];
-    if let Err(e) = query::update_entry(db_path, "2023-01-01", &updated_data) {
+    if let Err(e) = update_entry(&conn, "2023-01-01", &updated_data) {
         eprintln!("Error updating entry: {}", e);
     } else {
         println!("Entry updated successfully.");
     }
 
     // Delete the entry
-    if let Err(e) = query::delete_entry(db_path, "2023-01-01") {
+    if let Err(e) = delete_entry(&conn, "2023-01-01") {
         eprintln!("Error deleting entry: {}", e);
     } else {
         println!("Entry deleted successfully.");
     }
+
+    Ok(())
 }

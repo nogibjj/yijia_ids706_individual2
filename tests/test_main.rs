@@ -1,43 +1,55 @@
 #[cfg(test)]
 mod tests {
-    use yijia_ids706_individual2::{extract, query, transform_load};
-    use rusqlite::{Connection, Result, OptionalExtension};
-    use std::fs;
-
-    // Ensure the database is loaded
-    fn ensure_database_loaded() -> Result<()> {
-        let conn = Connection::open("WeatherDB.db")?;
-        let table_exists: bool = conn.query_row(
-            "SELECT EXISTS (SELECT name FROM sqlite_master WHERE type='table' AND name='WeatherDB')",
+    use rusqlite::{Connection, OptionalExtension, Result};
+    use yijia_ids706_individual2::{extract, transform_load, create_entry, read_entry, update_entry, delete_entry};
+    fn setup_in_memory_db() -> Connection {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        // Set up the WeatherDB table schema for each test
+        conn.execute(
+            "CREATE TABLE WeatherDB (
+                Date TEXT, 
+                Temperature_Minimum REAL, 
+                Temperature_Maximum REAL, 
+                Precipitation REAL, 
+                Snowfall REAL, 
+                Snow_Depth REAL, 
+                Average_Wind_Speed REAL
+            )",
             [],
-            |row| row.get(0),
-        )?;
-        
-        if !table_exists {
-            let dataset_path = "rdu-weather-history.csv";
-            transform_load::transform_load(dataset_path)?;
-        }
-        Ok(())
+        ).expect("Failed to create WeatherDB table in in-memory database");
+        conn
     }
 
     #[test]
     fn test_extract() {
         let url = "https://raw.githubusercontent.com/nogibjj/yijia_ids706_miniProj3/refs/heads/main/rdu-weather-history.csv";
         let file_path = "rdu-weather-history.csv";
-        
-        let result = extract::extract(url, file_path);
-        assert!(result.is_ok(), "Failed to download file: {:?}", result.unwrap_err());
-        assert!(fs::metadata(file_path).is_ok(), "File not found after extraction.");
+
+        let result = extract(url, file_path);
+        assert!(
+            result.is_ok(),
+            "Failed to download file: {:?}",
+            result.unwrap_err()
+        );
+        assert!(
+            std::fs::metadata(file_path).is_ok(),
+            "File not found after extraction."
+        );
         println!("Extract test passed!");
     }
 
     #[test]
     fn test_transform_load() -> Result<()> {
+        let conn = setup_in_memory_db();
         let dataset_path = "rdu-weather-history.csv";
-        let db_result = transform_load::transform_load(dataset_path);
         
-        assert!(db_result.is_ok(), "Failed to load data into SQLite: {:?}", db_result.unwrap_err());
-        let conn = Connection::open("WeatherDB.db")?;
+        let db_result = transform_load(&conn, dataset_path);
+        assert!(
+            db_result.is_ok(),
+            "Failed to load data into SQLite: {:?}",
+            db_result.unwrap_err()
+        );
+
         let count: i64 = conn.query_row("SELECT COUNT(*) FROM WeatherDB", [], |row| row.get(0))?;
         assert!(count > 0, "No data found in the database.");
         println!("Load test passed!");
@@ -46,14 +58,12 @@ mod tests {
 
     #[test]
     fn test_create_entry() -> Result<()> {
-        ensure_database_loaded()?;
-        let mut conn = Connection::open("WeatherDB.db")?;
-        let tx = conn.transaction()?;
-
+        let conn = setup_in_memory_db();
         let new_record = ["2024-10-04", "60.0", "85.0", "0.2", "0.0", "0.0", "12.5"];
-        query::create_entry("WeatherDB.db", &new_record)?;
+        
+        create_entry(&conn, &new_record)?;
 
-        let result: (String, f64, f64, f64, f64, f64, f64) = tx.query_row(
+        let result: (String, f64, f64, f64, f64, f64, f64) = conn.query_row(
             "SELECT * FROM WeatherDB WHERE Date = ?",
             [&new_record[0]],
             |row| {
@@ -69,35 +79,32 @@ mod tests {
             },
         )?;
         assert_eq!(result.0, new_record[0], "Create test failed: Record mismatch.");
-        tx.rollback()?;  // Rollback transaction to discard changes
         println!("Create test passed!");
         Ok(())
     }
 
     #[test]
     fn test_read_entry() -> Result<()> {
-        ensure_database_loaded()?;
-        let mut conn = Connection::open("WeatherDB.db")?;
-        let tx = conn.transaction()?;
+        let conn = setup_in_memory_db();
+        let new_record = ["2022-01-08", "21.0", "42.0", "0.0", "0.0", "0.0", "3.8"];
+        create_entry(&conn, &new_record)?;
 
-        let result = query::read_entry("WeatherDB.db", "2022-01-08")?;
+        let result = read_entry(&conn, "2022-01-08")?;
         assert!(!result.is_empty(), "Read test failed: No data found.");
-
-        tx.rollback()?; // Rollback transaction to discard any inadvertent changes
         println!("Read test passed!");
         Ok(())
     }
 
     #[test]
     fn test_update_entry() -> Result<()> {
-        ensure_database_loaded()?;
-        let mut conn = Connection::open("WeatherDB.db")?;
-        let tx = conn.transaction()?;
+        let conn = setup_in_memory_db();
+        let initial_record = ["2022-01-17", "20.0", "40.0", "0.0", "0.0", "0.0", "5.0"];
+        create_entry(&conn, &initial_record)?;
 
         let updated_data = ["65.0", "90.0", "0.1", "0.0", "0.0", "10.0"];
-        query::update_entry("WeatherDB.db", "2022-01-17", &updated_data)?;
+        update_entry(&conn, "2022-01-17", &updated_data)?;
 
-        let result: (String, f64, f64, f64, f64, f64, f64) = tx.query_row(
+        let result: (String, f64, f64, f64, f64, f64, f64) = conn.query_row(
             "SELECT * FROM WeatherDB WHERE Date = ?",
             ["2022-01-17"],
             |row| {
@@ -112,30 +119,28 @@ mod tests {
                 ))
             },
         )?;
-        assert_eq!(result.1, updated_data[0].parse::<f64>().unwrap(), "Update test failed: Data mismatch.");
-
-        tx.rollback()?; // Rollback transaction to discard changes
+        assert_eq!(result.1, 65.0, "Update test failed: Data mismatch.");
         println!("Update test passed!");
         Ok(())
     }
 
     #[test]
     fn test_delete_entry() -> Result<()> {
-        ensure_database_loaded()?;
-        let mut conn = Connection::open("WeatherDB.db")?;
-        let tx = conn.transaction()?;
+        let conn = setup_in_memory_db();
+        let new_record = ["2022-01-26", "15.0", "30.0", "0.0", "0.0", "0.0", "4.0"];
+        create_entry(&conn, &new_record)?;
 
-        query::delete_entry("WeatherDB.db", "2022-01-26")?;
+        delete_entry(&conn, "2022-01-26")?;
 
-        let result = tx.query_row(
-            "SELECT * FROM WeatherDB WHERE Date = ?",
-            ["2022-01-26"],
-            |row| Ok(row.get::<_, String>(0)),
-        ).optional()?;
-        
+        let result: Option<String> = conn
+            .query_row(
+                "SELECT Date FROM WeatherDB WHERE Date = ?",
+                ["2022-01-26"],
+                |row| row.get(0),
+            )
+            .optional()?;
+
         assert!(result.is_none(), "Delete test failed: Record still exists.");
-        
-        tx.rollback()?; // Rollback transaction to discard changes
         println!("Delete test passed!");
         Ok(())
     }
